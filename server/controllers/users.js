@@ -1,9 +1,24 @@
+const User = require('../models/user')
+
 module.exports = {
   signUp: async (req, res, next) => {
-    // Get Email & Password
-    // req.value.body
-    console.log('contents of req.valuse.body', req.value.body);
-    console.log('UsersController.signUp() called!');
+    const { email, password } = req.value.body;
+
+    // Check same email
+    const foundUser = await User.findOne({ email })
+    if (foundUser) {
+      return res.status(403).json({ error: 'Email is already use' })
+    }
+
+    // crete user
+    const newUser = new User({
+      email: email,
+      password: password
+    })
+    await newUser.save();
+
+    // respon with token
+    res.json({ user: 'created'})
   },
   signIn: async (req, res, next) => {
     // Generate token
