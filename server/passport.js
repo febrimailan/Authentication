@@ -3,13 +3,15 @@ const JwtStrategy = require('passport-jwt').Strategy;
 const { ExtractJwt } = require('passport-jwt');
 const LocalStrategy = require('passport-local').Strategy;
 const GooglePlusTokenStrategy = require('passport-google-plus-token');
-const { JWT_SECRET } = require('./configuration');
+const FacebookTokenStrategy = require('passport-facebook-token');
+// const { JWT_SECRET } = require('./configuration');
 const User = require('./models/user');
+require('dotenv').config()
 
 // JSON WEB TOKENS STRATEGY
 passport.use(new JwtStrategy({
   jwtFromRequest: ExtractJwt.fromHeader('authorization'),
-  secretOrKey: JWT_SECRET
+  secretOrKey: process.env.JWT_SECRET
 }, async(payload, done)=>{
   try {
     // find user specified in token
@@ -28,8 +30,8 @@ passport.use(new JwtStrategy({
 
 // GOOGLE OAUTH STRATEGY
 passport.use('googleToken', new GooglePlusTokenStrategy({
-  clientID: '742359414496-bbhum26a02so2udihhueeni2i7q9spuk.apps.googleusercontent.com',
-  clientSecret: 'q3_U9zf8EduhTuzUxYm49OU6'
+  clientID: process.env.GG_CLIENT_ID,
+  clientSecret: process.env.GG_CLIENT_SECRET
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     console.log('accessToken: ', accessToken);
@@ -60,6 +62,34 @@ passport.use('googleToken', new GooglePlusTokenStrategy({
   }
 
 }));
+
+// FACEBOOK STRATEGY
+passport.use('facebookToken', new FacebookTokenStrategy({
+  clientID: process.env.FB_CLIENT_ID,
+  clientSecret: process.env.FB_CLIENT_SECRET
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    console.log('profile: ', profile);
+    console.log('accessToken: ', accessToken);
+    console.log('refreshToken: ', refreshToken);
+
+    const existingUser = await User.findOne({"facebook.id": profile.id});
+    if(existingUser) {
+      return done(null, existingUser);
+    }
+
+    const newUser = new User({
+      method: 'facebook',
+      facebook: {
+        id: profile.id,
+        email: profile.emails[0].value
+      }
+    })
+
+  } catch (error) {
+    done(error, false, error.message)
+  }
+}))
 
 // LOCAL STRATEGY
 passport.use( new LocalStrategy({
